@@ -17,22 +17,27 @@ namespace Hangfire.Oracle.Core
         private const int DelayBetweenPasses = 100;
 
         public OracleDistributedLock(OracleStorage storage, string resource, TimeSpan timeout)
-            : this(storage.CreateAndOpenConnection(), resource, timeout)
+            : this(storage, storage.CreateAndOpenConnection(), resource, timeout)
         {
-            _storage = storage;
         }
 
         private readonly IDbConnection _connection;
 
         public OracleDistributedLock(IDbConnection connection, string resource, TimeSpan timeout)
-            : this(connection, resource, timeout, new CancellationToken())
+            : this(null, connection, resource, timeout, new CancellationToken())
         {
         }
 
         public OracleDistributedLock(IDbConnection connection, string resource, TimeSpan timeout, CancellationToken cancellationToken)
+            : this(null, connection, resource, timeout, cancellationToken)
+        {
+        }
+
+        private OracleDistributedLock(OracleStorage storage, IDbConnection connection, string resource, TimeSpan timeout, CancellationToken cancellationToken = default)
         {
             Logger.TraceFormat("OracleDistributedLock resource={0}, timeout={1}", resource, timeout);
 
+            _storage = storage;
             Resource = resource;
             _timeout = timeout;
             _connection = connection;
@@ -52,13 +57,13 @@ namespace Hangfire.Oracle.Core
         {
             var tableName = GetDistributedLockTable();
             return _connection.Execute(
-                $@"INSERT INTO {tableName} (""RESOURCE"", CREATED_AT)
+                $@"INSERT INTO {tableName} (""RESOURCE"", CREATED_AT).
                    (SELECT :RES, :NOW
                     FROM DUAL
                     WHERE NOT EXISTS
                         (SELECT ""RESOURCE"", CREATED_AT
                          FROM {tableName}
-                         WHERE ""RESOURCE"" = :RES AND CREATED_AT > :EXPIRED))", 
+                         WHERE ""RESOURCE"" = :RES AND CREATED_AT > :EXPIRED))",
                 new
                 {
                     RES = resource,
@@ -129,7 +134,7 @@ namespace Hangfire.Oracle.Core
             {
                 return string.Compare(Resource, oracleDistributedLock.Resource, StringComparison.OrdinalIgnoreCase);
             }
-            
+
             throw new ArgumentException("Object is not a OracleDistributedLock");
         }
     }
