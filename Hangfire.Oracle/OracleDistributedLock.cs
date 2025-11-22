@@ -13,59 +13,86 @@ namespace Hangfire.Oracle.Core
         private readonly OracleStorage _storage;
         private readonly DateTime _start;
         private readonly CancellationToken _cancellationToken;
+        private readonly IDbConnection _connection;
+        private readonly bool _ownsConnection;
 
         private const int DelayBetweenPasses = 100;
 
         public OracleDistributedLock(OracleStorage storage, string resource, TimeSpan timeout)
-            : this(storage, storage.CreateAndOpenConnection(), resource, timeout)
         {
+            Logger.TraceFormat("OracleDistributedLock resource={0}, timeout={1}", resource, timeout);
+            
+            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
+            _connection = storage.CreateAndOpenConnection();
+            Resource = resource;
+            _timeout = timeout;
+            _cancellationToken = default;
+            _start = DateTime.UtcNow;
+            _ownsConnection = true;
         }
 
-        private readonly IDbConnection _connection;
-
         public OracleDistributedLock(IDbConnection connection, string resource, TimeSpan timeout)
-            : this(null, connection, resource, timeout, new CancellationToken())
+            : this(connection, resource, timeout, new CancellationToken())
         {
         }
 
         public OracleDistributedLock(IDbConnection connection, string resource, TimeSpan timeout, CancellationToken cancellationToken)
-            : this(null, connection, resource, timeout, cancellationToken)
-        {
-        }
-
-        private OracleDistributedLock(OracleStorage storage, IDbConnection connection, string resource, TimeSpan timeout, CancellationToken cancellationToken = default)
         {
             Logger.TraceFormat("OracleDistributedLock resource={0}, timeout={1}", resource, timeout);
 
-            _storage = storage;
+            if (connection == null) throw new ArgumentNullException(nameof(connection));
+            
+            _storage = ExtractStorageFromConnection(connection);
+            _connection = connection;
             Resource = resource;
             _timeout = timeout;
-            _connection = connection;
             _cancellationToken = cancellationToken;
             _start = DateTime.UtcNow;
+            _ownsConnection = false;
         }
 
         public string Resource { get; }
 
+        private OracleStorage ExtractStorageFromConnection(IDbConnection connection)
+        {
+            var storage = OracleStorageConnectionContext.Current;
+            if (storage == null)
+            {
+                Logger.Warn("Cannot extract OracleStorage from connection context. Using default table names.");
+            }
+            return storage;
+        }
+
         private string GetDistributedLockTable()
         {
-            // Try to get from storage if available, otherwise use default
-            return _storage?.TableNameProvider?.GetTableName("DistributedLock") ?? "HF_DISTRIBUTED_LOCK";
+            var tableName = _storage?.TableNameProvider?.GetTableName("DistributedLock") ?? "HF_DISTRIBUTED_LOCK";
+            Logger.DebugFormat("GetDistributedLockTable resolved to: {0}", tableName);
+            return tableName;
         }
 
         private int AcquireLock(string resource, TimeSpan timeout)
         {
             var tableName = GetDistributedLockTable();
+            
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new InvalidOperationException("DistributedLock table name is empty!");
+            }
+
+            var sql = $@"INSERT INTO {tableName} (""RESOURCE"", CREATED_AT)
+                         SELECT :RES, :NOW
+                         FROM DUAL
+                         WHERE NOT EXISTS (
+                             SELECT 1 FROM {tableName}
+                             WHERE ""RESOURCE"" = :RES
+                               AND CREATED_AT > :EXPIRED
+                         )";
+
+            Logger.DebugFormat("AcquireLock SQL:\n{0}", sql);
+
             return _connection.Execute(
-                $@"INSERT INTO {tableName} (""RESOURCE"", CREATED_AT).
-                   (SELECT :RES, :NOW
-                    FROM DUAL
-                    WHERE NOT EXISTS
-                        (SELECT ""RESOURCE"", CREATED_AT
-                         FROM {tableName}
-                         WHERE ""RESOURCE"" = :RES AND CREATED_AT > :EXPIRED))",
-                new
-                {
+                sql,
+                new {
                     RES = resource,
                     NOW = DateTime.UtcNow,
                     EXPIRED = DateTime.UtcNow.Add(timeout.Negate())
@@ -76,7 +103,10 @@ namespace Hangfire.Oracle.Core
         {
             Release();
 
-            _storage?.ReleaseConnection(_connection);
+            if (_ownsConnection)
+            {
+                _storage?.ReleaseConnection(_connection);
+            }
         }
 
         internal OracleDistributedLock Acquire()
@@ -114,13 +144,17 @@ namespace Hangfire.Oracle.Core
             Logger.TraceFormat("Release resource={0}", Resource);
 
             var tableName = GetDistributedLockTable();
-            _connection.Execute(
-                $@"DELETE FROM {tableName} 
-                   WHERE ""RESOURCE"" = :RES",
-                new
-                {
-                    RES = Resource
-                });
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                Logger.Error("DistributedLock table name is empty during Release!");
+                return;
+            }
+
+            var sql = $@"DELETE FROM {tableName} WHERE ""RESOURCE"" = :RES";
+            
+            Logger.DebugFormat("Release SQL:\n{0}", sql);
+            
+            _connection.Execute(sql, new { RES = Resource });
         }
 
         public int CompareTo(object obj)
@@ -136,6 +170,19 @@ namespace Hangfire.Oracle.Core
             }
 
             throw new ArgumentException("Object is not a OracleDistributedLock");
+        }
+    }
+
+    // Thread-local context to pass storage through connection calls
+    internal static class OracleStorageConnectionContext
+    {
+        [ThreadStatic]
+        private static OracleStorage _current;
+
+        public static OracleStorage Current
+        {
+            get => _current;
+            set => _current = value;
         }
     }
 }

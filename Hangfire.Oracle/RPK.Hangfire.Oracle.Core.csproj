@@ -15,7 +15,7 @@
 		<RepositoryType>git</RepositoryType>
 		<Copyright>Copyright © 2025 Rayan Pardaz Kavosh - Amirhossein Aghazadeh</Copyright>
 		<PackageTags>Hangfire;Oracle;Hangfire-Oracle;Kavosh;Custom-Tables;Dynamic-Naming;Enterprise;Persian;Farsi;VARCHAR2;CLOB;Schema-Configuration</PackageTags>
-		<Version>1.0.0</Version>
+		<Version>1.0.1</Version>
 		<AssemblyVersion>1.0.0.0</AssemblyVersion>
 		<FileVersion>1.0.0.0</FileVersion>
 		<AssemblyName>Kavosh.Hangfire.Oracle.Core</AssemblyName>
@@ -30,7 +30,7 @@
 			- Updated package dependencies for security and compatibility
 			- Enhanced documentation and configuration examples
 		</PackageReleaseNotes>
-		<PackageVersion>1.0.0</PackageVersion>
+		<PackageVersion>1.0.1</PackageVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 

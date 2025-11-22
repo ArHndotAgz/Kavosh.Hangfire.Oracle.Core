@@ -7,13 +7,12 @@
   "targets": {
     ".NETStandard,Version=v2.0": {},
     ".NETStandard,Version=v2.0/": {
-      "Kavosh.Hangfire.Oracle.Core/1.0.0": {
+      "Kavosh.Hangfire.Oracle.Core/1.0.1": {
         "dependencies": {
           "Dapper": "2.1.35",
           "Dapper.Oracle": "1.0.3",
           "Hangfire.Core": "1.8.20",
           "Microsoft.CSharp": "4.7.0",
-          "NETStandard.Library": "2.0.3",
           "Newtonsoft.Json": "13.0.3",
           "Oracle.ManagedDataAccess.Core": "2.19.280"
         },
@@ -115,12 +114,6 @@
             "assemblyVersion": "4.0.5.0",
             "fileVersion": "4.700.19.56404"
           }
-        }
-      },
-      "Microsoft.NETCore.Platforms/1.1.0": {},
-      "NETStandard.Library/2.0.3": {
-        "dependencies": {
-          "Microsoft.NETCore.Platforms": "1.1.0"
         }
       },
       "Newtonsoft.Json/13.0.3": {
@@ -272,7 +265,7 @@
     }
   },
   "libraries": {
-    "Kavosh.Hangfire.Oracle.Core/1.0.0": {
+    "Kavosh.Hangfire.Oracle.Core/1.0.1": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
@@ -311,20 +304,6 @@
       "sha512": "sha512-pTj+D3uJWyN3My70i2Hqo+OXixq3Os2D1nJ2x92FFo6sk8fYS1m1WLNTs0Dc1uPaViH0YvEEwvzddQ7y4rhXmA==",
       "path": "microsoft.csharp/4.7.0",
       "hashPath": "microsoft.csharp.4.7.0.nupkg.sha512"
-    },
-    "Microsoft.NETCore.Platforms/1.1.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-kz0PEW2lhqygehI/d6XsPCQzD7ff7gUJaVGPVETX611eadGsA3A877GdSlU0LRVMCTH/+P3o2iDTak+S08V2+A==",
-      "path": "microsoft.netcore.platforms/1.1.0",
-      "hashPath": "microsoft.netcore.platforms.1.1.0.nupkg.sha512"
-    },
-    "NETStandard.Library/2.0.3": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-st47PosZSHrjECdjeIzZQbzivYBJFv6P2nv4cj2ypdI204DO+vZ7l5raGMiX4eXMJ53RfOIg+/s4DHVZ54Nu2A==",
-      "path": "netstandard.library/2.0.3",
-      "hashPath": "netstandard.library.2.0.3.nupkg.sha512"
     },
     "Newtonsoft.Json/13.0.3": {
       "type": "package",

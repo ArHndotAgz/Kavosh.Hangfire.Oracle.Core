@@ -213,11 +213,14 @@ namespace Hangfire.Oracle.Core
 
             try
             {
+                OracleStorageConnectionContext.Current = this;
+                
                 connection = CreateAndOpenConnection();
                 return func(connection);
             }
             finally
             {
+                OracleStorageConnectionContext.Current = null;
                 ReleaseConnection(connection);
             }
         }
